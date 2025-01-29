@@ -17,8 +17,10 @@ UInt256 uint256_create_from_u32( uint32_t val ) {
 // The element at index 0 is the least significant, and the element
 // at index 7 is the most significant.
 UInt256 uint256_create( const uint32_t data[8] ) {
-  UInt256 result;
-  // TODO: implement
+  UInt256 result = {0};
+  for (int i = 0; i < 8; i++) {
+    result.data[i] = data[i];
+  }
   return result;
 }
 
@@ -47,8 +49,12 @@ uint32_t uint256_get_bits( UInt256 val, unsigned index ) {
 
 // Return 1 if bit at given index is set, 0 otherwise.
 int uint256_is_bit_set( UInt256 val, unsigned index ) {
-  // TODO: implement
-  return 0;
+  if (index >= 256) {
+    return 0;
+  }
+  uint32_t segment = index / 32;
+  uint32_t bit_pos = index % 32;
+  return (val.data[segment] & (1U << bit_pos)) ? 1 : 0;
 }
 
 // Compute the sum of two UInt256 values.
