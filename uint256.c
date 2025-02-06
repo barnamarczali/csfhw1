@@ -59,29 +59,48 @@ int uint256_is_bit_set( UInt256 val, unsigned index ) {
 
 // Compute the sum of two UInt256 values.
 UInt256 uint256_add( UInt256 left, UInt256 right ) {
-  UInt256 sum;
-  // TODO: implement
+  UInt256 sum = {0};
+  uint32_t carry = 0;
+
+  for (int i = 0; i < 8; i++) {
+    uint64_t temp = (uint64_t)left.data[i] + right.data[i] + carry;
+    sum.data[i] = (uint32_t)temp;
+    carry = (temp >> 32) & 1;
+  }
+
   return sum;
 }
 
 // Compute the difference of two UInt256 values.
 UInt256 uint256_sub( UInt256 left, UInt256 right ) {
-  UInt256 result;
-  // TODO: implement
-  return result;
+  return uint256_add(left, uint256_negate(right));
 }
 
 // Return the two's-complement negation of the given UInt256 value.
 UInt256 uint256_negate( UInt256 val ) {
-  UInt256 result;
-  // TODO: implement
+  UInt256 result = {0};
+  uint32_t carry = 1;
+
+  for (int i = 0; i < 8; i++) {
+    uint64_t temp = (uint64_t)(~val.data[i]) + carry;
+    result.data[i] = (uint32_t)temp;
+    carry = (temp >> 32) & 1;
+  }
+
   return result;
 }
 
 // Compute the product of two UInt256 values.
 UInt256 uint256_mul( UInt256 left, UInt256 right ) {
-  UInt256 product;
-  // TODO: implement
+  UInt256 product = {0};
+
+  for (int i = 0; i < 256; i++) {
+    if (uint256_is_bit_set(right, i)) {
+      UInt256 temp = uint256_lshift(left, i);
+      product = uint256_add(product, temp);
+    }
+  }
+
   return product;
 }
 

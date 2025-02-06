@@ -207,6 +207,9 @@ void test_add( TestObjs *objs ) {
   result = uint256_add( objs->zero, objs->one );
   ASSERT_SAME( objs->one, result );
 
+  result = uint256_add( objs->one, objs->zero );
+  ASSERT_SAME( objs->one, result );
+
   uint32_t two_data[8] = { 2U };
   UInt256 two;
   INIT_FROM_ARR( two, two_data );
@@ -215,6 +218,31 @@ void test_add( TestObjs *objs ) {
 
   result = uint256_add( objs->max, objs->one );
   ASSERT_SAME( objs->zero, result );
+
+  result = uint256_add( objs->max, objs->zero );
+  ASSERT_SAME( objs->max, result );
+
+  uint32_t one_data[8] = { 1U, 0U, 0U, 0U, 0U, 0U, 0U, 0U };
+  UInt256 one_large;
+  INIT_FROM_ARR( one_large, one_data );
+
+  result = uint256_add(objs->max, one_large);
+  ASSERT_SAME(objs->zero, result);
+
+  // add large numbers that propagate carries
+  uint32_t carry_test_data[8] = { 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0U };
+  UInt256 carry_test;
+  INIT_FROM_ARR( carry_test, carry_test_data );
+
+  result = uint256_add(carry_test, objs->one);
+  ASSERT(0U == result.data[0]);
+  ASSERT(0U == result.data[1]);
+  ASSERT(0U == result.data[2]);
+  ASSERT(0U == result.data[3]);
+  ASSERT(0U == result.data[4]);
+  ASSERT(0U == result.data[5]);
+  ASSERT(0U == result.data[6]);
+  ASSERT(1U == result.data[7]);
 }
 
 void test_sub( TestObjs *objs ) {
@@ -228,6 +256,32 @@ void test_sub( TestObjs *objs ) {
 
   result = uint256_sub( objs->zero, objs->one );
   ASSERT_SAME( objs->max, result );
+
+  result = uint256_sub( objs->one, objs->zero );
+  ASSERT_SAME( objs->one, result );
+
+  result = uint256_sub( objs->max, objs->zero );
+  ASSERT_SAME( objs->max, result );
+
+  result = uint256_sub( objs->max, objs->max );
+  ASSERT_SAME( objs->zero, result );
+
+  uint32_t carry_test_data[8] = { 1U, 0U, 0U, 0U, 0U, 0U, 0U, 0U };
+  UInt256 carry_test;
+  INIT_FROM_ARR( carry_test, carry_test_data );
+
+  result = uint256_sub(carry_test, objs->one);
+  ASSERT_SAME(objs->zero, result);
+
+  result = uint256_sub(carry_test, objs->max);
+  ASSERT(2U == result.data[0]);
+  ASSERT(0U == result.data[1]);
+  ASSERT(0U == result.data[2]);
+  ASSERT(0U == result.data[3]);
+  ASSERT(0U == result.data[4]);
+  ASSERT(0U == result.data[5]);
+  ASSERT(0U == result.data[6]);
+  ASSERT(0U == result.data[7]);
 }
 
 void test_negate( TestObjs *objs ) {
@@ -241,6 +295,21 @@ void test_negate( TestObjs *objs ) {
 
   result = uint256_negate( objs->max );
   ASSERT_SAME( objs->one, result );
+
+  // negating a middle value
+  uint32_t mid_value_data[8] = { 0x00000001U, 0x00000000U, 0x00000000U, 0x00000000U, 0x00000000U, 0x00000000U, 0x00000000U, 0x80000000U };
+  UInt256 mid_value;
+  INIT_FROM_ARR( mid_value, mid_value_data );
+
+  result = uint256_negate(mid_value);
+  ASSERT(0xFFFFFFFEU == result.data[0]); // inverted + 1
+  ASSERT(0xFFFFFFFFU == result.data[1]);
+  ASSERT(0xFFFFFFFFU == result.data[2]);
+  ASSERT(0xFFFFFFFFU == result.data[3]);
+  ASSERT(0xFFFFFFFFU == result.data[4]);
+  ASSERT(0xFFFFFFFFU == result.data[5]);
+  ASSERT(0xFFFFFFFFU == result.data[6]);
+  ASSERT(0x7FFFFFFFU == result.data[7]); // sign bit inversion
 }
 
 void test_neg_overflow( TestObjs *objs ) {
@@ -268,9 +337,28 @@ void test_mul( TestObjs *objs ) {
   result = uint256_mul( objs->zero, objs->one );
   ASSERT_SAME( objs->zero, result );
 
+  result = uint256_mul( objs->zero, objs->zero );
+  ASSERT_SAME( objs->zero, result );
+
+  result = uint256_mul( objs->one, objs->max );
+  ASSERT_SAME( objs->max, result );
+
+  result = uint256_mul( objs->max, objs->one );
+  ASSERT_SAME( objs->max, result );
+
   UInt256 two = { { 2,0,0,0,0,0,0,0 } }, four = { { 4,0,0,0,0,0,0,0 } };
   result = uint256_mul( two, two );
   ASSERT_SAME( four, result );
+
+  // with carries
+  UInt256 two = uint256_create_from_u32(2);
+  UInt256 four = uint256_create_from_u32(4);
+  result = uint256_mul(two, two);
+  ASSERT_SAME(four, result);
+
+  // overflow
+  result = uint256_mul( objs->max, objs->max );
+  ASSERT_SAME(objs->max, result);
 
   // a more complicated test
 
