@@ -26,16 +26,52 @@ UInt256 uint256_create( const uint32_t data[8] ) {
 
 // Create a UInt256 value from a string of hexadecimal digits.
 UInt256 uint256_create_from_hex( const char *hex ) {
-  UInt256 result;
-  // TODO: implement
+  UInt256 result = {0};  
+  size_t len = strlen(hex);
+  if (len == 1 && hex[0] == '0') {
+    return result;
+  }
+  size_t hex_start = (len > 64) ? len - 64 : 0;
+  size_t hex_len = len - hex_start;
+  for (size_t i = 0; i < hex_len; i++) {
+    char c = hex[hex_start + i];
+    uint32_t val = 0;
+    if (c >= '0' && c <= '9') {
+      val = c - '0';
+    } else if (c >= 'a' && c <= 'f') {
+      val = c - 'a' + 10;
+    } else if (c >= 'A' && c <= 'F') {
+      val = c - 'A' + 10;
+    } else {
+      continue;
+    }
+    size_t byte_index = (hex_len - 1 - i) / 8;
+    size_t bit_shift = ((hex_len - 1 - i) % 8) * 4;
+    result.data[byte_index] |= (val << bit_shift);
+  }
   return result;
 }
 
 // Return a dynamically-allocated string of hex digits representing the
 // given UInt256 value.
 char *uint256_format_as_hex( UInt256 val ) {
-  char *hex = NULL;
-  // TODO: implement
+  char *hex = malloc(65);
+  if (!hex) return NULL;
+  int started = 0;
+  int index = 0;
+  for (int i = 7; i >= 0; i--) {
+    for (int j = 7; j >= 0; j--) {
+      uint8_t nibble = (val.data[i] >> (j * 4)) & 0xF;
+      if (nibble != 0 || started) {
+        hex[index++] = "0123456789abcdef"[nibble];
+        started = 1;
+      }
+    }
+  }
+  if (index == 0) {
+    hex[index++] = '0';
+  }
+  hex[index] = '\0';
   return hex;
 }
 
@@ -61,13 +97,11 @@ int uint256_is_bit_set( UInt256 val, unsigned index ) {
 UInt256 uint256_add( UInt256 left, UInt256 right ) {
   UInt256 sum = {0};
   uint32_t carry = 0;
-
   for (int i = 0; i < 8; i++) {
     uint64_t temp = (uint64_t)left.data[i] + right.data[i] + carry;
     sum.data[i] = (uint32_t)temp;
     carry = (temp >> 32) & 1;
   }
-
   return sum;
 }
 
@@ -80,33 +114,36 @@ UInt256 uint256_sub( UInt256 left, UInt256 right ) {
 UInt256 uint256_negate( UInt256 val ) {
   UInt256 result = {0};
   uint32_t carry = 1;
-
   for (int i = 0; i < 8; i++) {
     uint64_t temp = (uint64_t)(~val.data[i]) + carry;
     result.data[i] = (uint32_t)temp;
     carry = (temp >> 32) & 1;
   }
-
   return result;
 }
 
 // Compute the product of two UInt256 values.
 UInt256 uint256_mul( UInt256 left, UInt256 right ) {
   UInt256 product = {0};
-
   for (int i = 0; i < 256; i++) {
     if (uint256_is_bit_set(right, i)) {
       UInt256 temp = uint256_lshift(left, i);
       product = uint256_add(product, temp);
     }
   }
-
   return product;
 }
 
 UInt256 uint256_lshift( UInt256 val, unsigned shift ) {
-  assert( shift < 256 );
-  UInt256 result;
-  // TODO: implement
+  assert(shift < 256);
+  UInt256 result = {0};
+  unsigned word_shift = shift / 32;
+  unsigned bit_shift = shift % 32;
+  for (int i = 7; i >= (int)word_shift; i--) {
+    result.data[i] = val.data[i - word_shift] << bit_shift;
+    if (i - word_shift > 0 && bit_shift > 0) {
+      result.data[i] |= val.data[i - word_shift - 1] >> (32 - bit_shift);
+    }
+  }
   return result;
 }

@@ -180,6 +180,12 @@ void test_create_from_hex( TestObjs *objs ) {
 
   UInt256 max = uint256_create_from_hex( "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" );
   ASSERT_SAME( objs->max, max );
+
+  UInt256 leading_zero = uint256_create_from_hex("00000000000000000000000000000001");
+  ASSERT_SAME( objs->one, leading_zero );
+
+  UInt256 case_insensitive = uint256_create_from_hex("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
+  ASSERT_SAME( objs->max, case_insensitive );
 }
 
 void test_format_as_hex( TestObjs *objs ) {
@@ -195,6 +201,14 @@ void test_format_as_hex( TestObjs *objs ) {
 
   s = uint256_format_as_hex( objs->max );
   ASSERT( 0 == strcmp( "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", s ) );
+  free( s );
+
+  // middle vals
+  uint32_t custom_data[8] = { 0xABCDEF12U, 0x34567890U, 0,0,0,0,0,0 };
+  UInt256 custom;
+  INIT_FROM_ARR( custom, custom_data );
+  s = uint256_format_as_hex( custom );
+  ASSERT( 0 == strcmp( "34567890abcdef12", s ) );
   free( s );
 }
 
@@ -302,14 +316,14 @@ void test_negate( TestObjs *objs ) {
   INIT_FROM_ARR( mid_value, mid_value_data );
 
   result = uint256_negate(mid_value);
-  ASSERT(0xFFFFFFFEU == result.data[0]); // inverted + 1
+  ASSERT(0xFFFFFFFFU == result.data[0]);
   ASSERT(0xFFFFFFFFU == result.data[1]);
   ASSERT(0xFFFFFFFFU == result.data[2]);
   ASSERT(0xFFFFFFFFU == result.data[3]);
   ASSERT(0xFFFFFFFFU == result.data[4]);
   ASSERT(0xFFFFFFFFU == result.data[5]);
   ASSERT(0xFFFFFFFFU == result.data[6]);
-  ASSERT(0x7FFFFFFFU == result.data[7]); // sign bit inversion
+  ASSERT(0x7FFFFFFFU == result.data[7]);
 }
 
 void test_neg_overflow( TestObjs *objs ) {
@@ -350,15 +364,16 @@ void test_mul( TestObjs *objs ) {
   result = uint256_mul( two, two );
   ASSERT_SAME( four, result );
 
-  // with carries
-  UInt256 two = uint256_create_from_u32(2);
-  UInt256 four = uint256_create_from_u32(4);
-  result = uint256_mul(two, two);
-  ASSERT_SAME(four, result);
-
   // overflow
   result = uint256_mul( objs->max, objs->max );
-  ASSERT_SAME(objs->max, result);
+  ASSERT(1U == result.data[0]);
+  ASSERT(0U == result.data[1]);
+  ASSERT(0U == result.data[2]);
+  ASSERT(0U == result.data[3]);
+  ASSERT(0U == result.data[4]);
+  ASSERT(0U == result.data[5]);
+  ASSERT(0U == result.data[6]);
+  ASSERT(0U == result.data[7]);
 
   // a more complicated test
 
@@ -405,6 +420,12 @@ void test_lshift( TestObjs *objs ) {
 
   result = uint256_lshift( objs->one, 2 );
   ASSERT_SAME( four, result );
+
+  uint32_t shifted_data[8] = { 0, 1, 0, 0, 0, 0, 0, 0 };
+  UInt256 shifted;
+  INIT_FROM_ARR( shifted, shifted_data );
+  result = uint256_lshift( objs->one, 32 );
+  ASSERT_SAME( shifted, result );
 
   // a more complicated test
   {
